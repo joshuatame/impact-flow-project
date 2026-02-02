@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+match /b/{bucket}/o {
+
+function signedIn() { return request.auth != null; }
+
+function myUserDoc() {
+return get(/databases/$(database)/documents/User/$(request.auth.uid)).data;
+}
+
+function isSystemAdmin() {
+return signedIn() && myUserDoc().app_role == "SystemAdmin";
+}
+
+function hasEntityAccess(entityId) {
+return signedIn() && (
+isSystemAdmin() ||
+(
+myUserDoc().entity_access[entityId] != null &&
+myUserDoc().entity_access[entityId].active == true
+)
+);
+}
+
+// Business entity logo paths: businessEntities/{entityId}/logo/...
+match /businessEntities/{entityId}/{allPaths=**} {
+allow read: if signedIn() && hasEntityAccess(entityId);
+allow write: if isSystemAdmin();
+}
+
+// default deny
+match /{allPaths=**} {
+allow read, write: if false;
+}
+}
+}

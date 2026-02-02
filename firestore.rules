@@ -1,0 +1,162 @@
+// File: firestore.rules
+rules_version = '2';
+
+service cloud.firestore {
+match /databases/{database}/documents {
+
+// ---------- Helpers ----------
+function signedIn() {
+return request.auth != null;
+}
+
+function me() {
+return signedIn()
+? get(/databases/$(database)/documents/User/$(request.auth.uid)).data
+: null;
+}
+
+function isSystemAdmin() {
+return signedIn() && me() != null && me().app_role == "SystemAdmin";
+}
+
+function entityAccess(entityId) {
+return (me() != null && me().entity_access != null) ? me().entity_access[entityId] : null;
+}
+
+function hasEntityAccess(entityId) {
+return isSystemAdmin()
+|| (signedIn()
+&& entityId is string
+&& entityAccess(entityId) != null
+&& entityAccess(entityId).active == true);
+}
+
+function entityRole(entityId) {
+return isSystemAdmin()
+? "SystemAdmin"
+: (entityAccess(entityId) != null ? entityAccess(entityId).role : null);
+}
+
+// Compat mode for legacy docs without entity_id.
+// Adjust roles here if you want tighter/looser.
+function isCompatPrivileged() {
+return isSystemAdmin()
+|| (signedIn()
+&& me() != null
+&& (me().app_role == "GeneralManager" || me().app_role == "Manager" || me().app_role == "ContractsAdmin"));
+}
+
+function hasEntityId(data) {
+return data != null && data.entity_id is string && data.entity_id.size() > 0;
+}
+
+function entityIdUnchanged() {
+return !(resource.data.keys().hasAny(["entity_id"]))
+? true
+: request.resource.data.entity_id == resource.data.entity_id;
+}
+
+// Reads for entity-scoped docs:
+// - If entity_id exists -> must have access.
+// - If missing entity_id -> compat privileged only.
+function canReadEntityScoped() {
+return hasEntityId(resource.data)
+? hasEntityAccess(resource.data.entity_id)
+: isCompatPrivileged();
+}
+
+// Creates for entity-scoped docs:
+// - MUST include entity_id (no new legacy docs)
+// - Must have access to that entity_id
+function canCreateEntityScoped() {
+return signedIn()
+&& hasEntityId(request.resource.data)
+&& hasEntityAccess(request.resource.data.entity_id);
+}
+
+// Updates/deletes for entity-scoped docs:
+// - If legacy (no entity_id) -> compat privileged only
+// - Else entity_id must not change + must have access
+function canWriteEntityScoped() {
+return hasEntityId(resource.data)
+? (signedIn()
+&& entityIdUnchanged()
+&& hasEntityAccess(resource.data.entity_id))
+: isCompatPrivileged();
+}
+
+// ---------- businessEntities ----------
+match /businessEntities/{entityId} {
+allow read: if hasEntityAccess(entityId);
+allow create, update, delete: if isSystemAdmin();
+}
+
+// ---------- User ----------
+match /User/{uid} {
+allow read: if isSystemAdmin() || (signedIn() && request.auth.uid == uid);
+
+// Self-create: allow if doc doesn't exist and email matches auth token email
+allow create: if signedIn()
+&& request.auth.uid == uid
+&& request.resource.data.email == request.auth.token.email;
+
+// Self-update: allow only safe profile fields (no entity_access/app_role/is_active/email changes)
+allow update: if isSystemAdmin()
+|| (signedIn()
+&& request.auth.uid == uid
+&& request.resource.data.email == resource.data.email
+&& request.resource.data.app_role == resource.data.app_role
+&& request.resource.data.is_active == resource.data.is_active
+&& request.resource.data.entity_access == resource.data.entity_access);
+
+allow delete: if isSystemAdmin();
+}
+
+// ---------- mail (client enqueue) ----------
+match /mail/{docId} {
+// Keep existing behavior: authenticated clients can enqueue.
+// Tighten later if needed (e.g., only allow specific fields).
+allow create: if signedIn();
+allow read, update, delete: if isSystemAdmin();
+}
+
+// ---------- Entity-scoped collections ----------
+// Add/remove collections here as needed.
+match /Program/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /Participant/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /ParticipantProgramEnrollment/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /CaseNote/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /FundingRecord/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /TrainingActivity/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /ParticipantTraining/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /ParticipantQuickNote/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /ProgramIntake/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /SurveyTemplate/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /SurveyResponse/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /EmploymentPlacement/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /Employer/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /Task/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /DEXActivityRecord/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /DEXExportLog/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /DexCaseLocationOption/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /Document/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /Notification/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /GoodNewsStory/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /Goal/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /WorkflowRequest/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /ForumMessage/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /ForumChannels/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /ForumPost/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /ActionPlanItem/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /Resource/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /CustomReport/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /SavedReport/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /PdfTemplate/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+match /PdfFormInstance/{docId} { allow read: if canReadEntityScoped(); allow create: if canCreateEntityScoped(); allow update, delete: if canWriteEntityScoped(); }
+
+// ---------- Default deny ----------
+match /{document=**} {
+allow read, write: if false;
+}
+}
+}

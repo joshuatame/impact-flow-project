@@ -1,0 +1,16 @@
+export const DOCUMENT_TYPES = [
+    "Photo ID",
+    "Birth Cert",
+    "Residental Address",
+    "Concession",
+    "Resume",
+    "ISEP",
+    "Program",
+    "Media",
+    "Consent",
+    "Employment Contract",
+    "Medical",
+    "Training Certifcate",
+    "Reference",
+    "Other",
+];
