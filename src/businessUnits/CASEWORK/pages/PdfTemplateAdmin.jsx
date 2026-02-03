@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { Plus, Save, Trash2, FileText, Upload, RefreshCw } from "lucide-react";
+import { Plus, Save, Trash2, FileText, Upload, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 
 const DEFAULT_FIELD_SIZE_PX = { wPx: 220, hPx: 34 };
 const MIN_SIZE = { w: 18, h: 18 };

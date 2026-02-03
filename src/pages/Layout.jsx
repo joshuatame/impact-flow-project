@@ -2,6 +2,8 @@
  * FILE: src/pages/Layout.jsx  (REPLACE ENTIRE FILE)
  * Fixes:
  * - Forces entityType to LABOURHIRE when on /labourhire/*
+ * - Forces entityType to SYSTEMADMIN when on /SystemAdmin/*
+ * - Hides "Pending Requests" + "Admin" extras inside SystemAdmin portal (portal has its own sidebar)
  * - Active highlighting works for "page" values that are real paths (contain "/")
  * - Uses stable keys: item.page || item.name
  **************************************************************************************************/
@@ -97,15 +99,26 @@ export default function Layout({ children, currentPageName }) {
     const isApprover = isApproverRole(realRole);
     const canApprove = isApprover;
 
-    // ✅ FORCE LabourHire sidebar for /labourhire/* regardless of active entity selection
-    const forcedEntityType = location.pathname.startsWith("/labourhire") ? "LABOURHIRE" : null;
+    // ✅ FORCE sidebar per portal routes regardless of active entity selection
+    const forcedEntityType = location.pathname.startsWith("/labourhire")
+        ? "LABOURHIRE"
+        : location.pathname.startsWith("/SystemAdmin")
+            ? "SYSTEMADMIN"
+            : null;
+
+    const isSystemAdminPortal = location.pathname.startsWith("/SystemAdmin");
 
     const activeEntityType = forcedEntityType || activeEntityState?.type || "";
-    const subtitle = activeEntityState?.name || getEntityTypeSubtitle(activeEntityType);
+
+    const subtitle = forcedEntityType
+        ? getEntityTypeSubtitle(activeEntityType)
+        : activeEntityState?.name || getEntityTypeSubtitle(activeEntityType);
 
     const navItems = useMemo(() => getNavItemsForEntityType(activeEntityType), [activeEntityType]);
 
     const allNavItems = useMemo(() => {
+        if (isSystemAdminPortal) return navItems;
+
         const extras = [
             {
                 name: "Pending Requests",
@@ -115,8 +128,9 @@ export default function Layout({ children, currentPageName }) {
             },
             ...(isApprover ? [{ name: "Admin", icon: Settings, page: "Admin" }] : []),
         ];
+
         return [...navItems, ...extras];
-    }, [navItems, isApprover]);
+    }, [navItems, isApprover, isSystemAdminPortal]);
 
     const getInitials = (name) => {
         if (!name) return "U";

@@ -4,6 +4,7 @@
  * - LabourHire routes must NOT be under NoSidebarWrapper.
  * - Put /labourhire/* under LayoutRouteWrapper so it always has the sidebar.
  * - Remove the duplicate /labourhire/* route under RequireOnboarded.
+ * - Add /SystemAdmin/* portal under LayoutRouteWrapper (SystemAdmin only), no entity selection required.
  **************************************************************************************************/
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Outlet, useLocation, Navigate } from "react-router-dom";
@@ -30,6 +31,10 @@ import BusinessEntitiesAdmin from "./BusinessEntitiesAdmin.jsx";
 import RequireAuth from "@/components/auth/RequireAuth";
 import RequireOnboarded from "@/components/auth/RequireOnboarded";
 import RequireEntitySelected from "@/components/auth/RequireEntitySelected";
+
+// ✅ SystemAdmin portal
+import RequireSystemAdmin from "@/components/auth/RequireSystemAdmin";
+import SystemAdminRouter from "./systemAdmin/SystemAdminRouter.jsx";
 
 import CW_JobBlastApply from "@/businessUnits/CASEWORK/public/JobBlastApply.jsx";
 import PR_JobBlastApply from "@/businessUnits/PROGRAMS/public/JobBlastApply.jsx";
@@ -217,6 +222,13 @@ export default function Pages() {
                 {/* ✅ Labourhire MUST have sidebar -> wrap with Layout */}
                 <Route element={<LayoutRouteWrapper />}>
                     <Route path="/labourhire/*" element={<LabourHireRouter />} />
+                </Route>
+
+                {/* ✅ SystemAdmin MUST have sidebar -> wrap with Layout (no entity selection required) */}
+                <Route element={<RequireSystemAdmin />}>
+                    <Route element={<LayoutRouteWrapper />}>
+                        <Route path="/SystemAdmin/*" element={<SystemAdminRouter />} />
+                    </Route>
                 </Route>
 
                 {/* Still no-sidebar for onboarding pending (your choice) */}

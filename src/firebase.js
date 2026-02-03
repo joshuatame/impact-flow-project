@@ -25,9 +25,9 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 // Core Firebase services
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
-const functions = getFunctions(app, "australia-southeast1");
 
+const functions = getFunctions(app, "australia-southeast1");
+const storage = getStorage(app, "gs://impact-flow-jpc.firebasestorage.app");
 export { app, auth, db, storage, functions };
 
 // ✅ Safe messaging getter (returns null if unsupported)

@@ -1,8 +1,8 @@
 [
   {
-    "origin": [ "https://impact-central.com.au", "https://impact-flow-jpc.web.app" ],
-    "method": [ "GET", "HEAD" ],
-    "responseHeader": [ "Content-Type", "Authorization", "x-goog-resumable" ],
+    "origin": [ "https://impact-central.com.au", "https://impact-flow-jpc.web.app", "http://localhost:5175", "http://localhost:5173" ],
+    "method": [ "GET", "HEAD", "OPTIONS" ],
+    "responseHeader": [ "Content-Type", "Authorization", "x-goog-resumable", "Content-Disposition", "Content-Length" ],
     "maxAgeSeconds": 3600
   }
 ]
